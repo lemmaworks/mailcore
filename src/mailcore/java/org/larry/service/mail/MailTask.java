@@ -60,13 +60,11 @@ public class MailTask implements Runnable{
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet res = null;
-        Statement statement = null;
 
         try {
             connection = SQLBase.getConnection();
             preparedStatement = connection.prepareStatement(clientSQL);
             preparedStatement.setInt(1, userId);
-
             res = preparedStatement.executeQuery();
 
             if (!res.next()) {
@@ -104,12 +102,13 @@ public class MailTask implements Runnable{
             
         }  finally {
             try {
-                if(connection != null)
-                    connection.close();
+                
                 if (preparedStatement != null)
                     preparedStatement.close();
-                if (statement != null)
-                    statement.close();
+                    
+                if(connection != null)
+                    connection.close();
+              
             } catch (Exception ee) {
                 LOGGER.warn("Cannot close SQL prepare statement or SQL statement or SQL connection");
             }
