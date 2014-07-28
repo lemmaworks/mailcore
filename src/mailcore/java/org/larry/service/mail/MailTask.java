@@ -101,14 +101,7 @@ public class MailTask implements Runnable{
 
         } catch (SQLException e) {
             LOGGER.warn("failed to get client info: id = " + userId + ", error: " + e.getMessage());
-            try {
-                if (preparedStatement != null)
-                    preparedStatement.close();
-                if (statement != null)
-                    statement.close();
-            } catch (Exception ee) {
-                LOGGER.warn("Cannot close prepare statement or statement");
-            }
+            
         }  finally {
             try {
                 if(connection != null)
