@@ -1,0 +1,185 @@
+<?xml version="1.0"?>
+
+<assembly>
+
+    <!-- The list of blocks being run in this Phoenix server. -->
+    <!-- -->
+    <!-- Each block element has a name attribute that is unique -->
+    <!-- among the blocks. It also has a class attribute that -->
+    <!-- specifies the class providing that block-->
+    <!-- -->
+    <!-- The block element may have one or more provide sub-elements. -->
+    <!-- Each provide element represents another block on which this -->
+    <!-- block depends.  Phoenix will calculate a dependency chain when it -->
+    <!-- reads this file, and will load and start the blocks in the order -->
+    <!-- specified by that chain.  Each provide element has a name attribute, -->
+    <!-- which matches the name of a block defined in this file.  It also -->
+    <!-- has a role attribute.  This attribute is the string by which the -->
+    <!-- enclosing block will identify the required block. -->
+    <!-- -->
+
+
+    <!-- SMTP Server -->
+    <block name="smtpserver" class="org.apache.james.smtpserver.SMTPServer">
+        <provide name="James" role="org.apache.mailet.MailetContext"/>
+        <provide name="localusersrepository" role="org.apache.james.services.UsersRepository"/>
+        <provide name="dnsserver" role="org.apache.james.services.DNSServer"/>
+        <provide name="sockets" role="org.apache.avalon.cornerstone.services.sockets.SocketManager"/>
+        <provide name="connections" role="org.apache.james.services.JamesConnectionManager"/>
+        <provide name="James" role="org.apache.james.services.MailServer"/>
+        <provide name="thread-manager" role="org.apache.avalon.cornerstone.services.threads.ThreadManager"/>
+    </block>
+
+    <!-- The James Spool Manager block  -->
+    <block name="spoolmanager" class="org.apache.james.transport.JamesSpoolManager">
+        <provide name="spoolrepository" role="org.apache.james.services.SpoolRepository"/>
+        <provide name="matcherpackages" role="org.apache.james.services.MatcherLoader"/>
+        <provide name="mailetpackages" role="org.apache.james.services.MailetLoader"/>
+    </block>
+
+    <block name="matcherpackages" class="org.apache.james.transport.JamesMatcherLoader">
+        <provide name="James" role="org.apache.mailet.MailetContext"/>
+    </block>
+
+    <block name="mailetpackages" class="org.apache.james.transport.JamesMailetLoader">
+        <provide name="James" role="org.apache.mailet.MailetContext"/>
+    </block>
+
+
+    <!-- The James block  -->
+    <block name="James" class="org.apache.james.James">
+
+        <!-- Specify which components will provide the services required by this
+        block. The roles are specified in the code and the .xinfo file. The names
+        here must match the names specified for a Block in this xml file.   -->
+        <provide name="dnsserver" role="org.apache.james.services.DNSServer"/>
+        <provide name="mailstore" role="org.apache.avalon.cornerstone.services.store.Store"/>
+        <provide name="users-store" role="org.apache.james.services.UsersStore"/>
+        <provide name="localusersrepository" role="org.apache.james.services.UsersRepository"/>
+        <provide name="spoolrepository" role="org.apache.james.services.SpoolRepository"/>
+        <provide name="sockets" role="org.apache.avalon.cornerstone.services.sockets.SocketManager"/>
+    </block>
+
+
+    <block name="dnsserver" class="org.apache.james.dnsserver.DNSServer"/>
+
+
+    <!-- The main SpoolRepository
+        - This is one of the most important piece of James. When SMTP receice a sending mail
+          request, instead of sending the email immediately, the mail is first put into the
+          spool. And the spool can be disk based, SQL based. The key idea is it will act
+          as a persistent queue, so that the system can tolerate huge requests
+
+        - Used by James and SpoolManager
+            + For James, SendMail(mail) will push the mail into repository
+            + For SpoolManager, the email will be retrieved from the repository.
+
+    -->
+    <block name="spoolrepository" class="org.apache.james.mailrepository.MailStoreSpoolRepository">
+        <provide name="mailstore"
+                 role="org.apache.avalon.cornerstone.services.store.Store"/>
+    </block>
+
+
+    <!-- This is needed to link the smtpserver to the local user repository
+         Yeah needed instead, UsersRepository = a table of authenticated users
+         to this SMTP server, or IMAP server and so on
+
+         - This class depends on user-stores, everything has been configured in config.xml
+    -->
+    <block name="localusersrepository" class="org.apache.james.core.LocalUsersRepository">
+        <provide name="users-store"
+                 role="org.apache.james.services.UsersStore"/>
+    </block>
+
+    <!-- The User Storage block
+
+        - A directory that allow access to various UsersRepository. Each UsersRepository
+          manages a (username,password) table that allows you to add/remove/delete
+
+        - The general idea is you don't need to create separate UsersRepository but
+          configure in config.xml, then request the repository later via users-store
+
+        - When created you need to input a configuration, which is config.xml. The root
+          node is users-store
+
+    -->
+    <block name="users-store" class="org.apache.james.core.AvalonUsersStore">
+        <!-- Configure file based user store here, defaults should be fine -->
+        <provide name="mailstore"
+                 role="org.apache.avalon.cornerstone.services.store.Store"/>
+    </block>
+
+
+    <!-- The High Level Storage block
+
+         - Still need debugging for better understanding. Generally this
+           is the directory that provides access to "repository" like
+           Inbox of userId-123
+
+         - AvalonMailStore when created need configuration, and the root
+           node is in config.xml which name is "mailstore"
+
+    -->
+    <block name="mailstore" class="org.apache.james.core.AvalonMailStore">
+    </block>
+
+    <!-- The Connection Manager block
+
+       - Manage socket connection, for example the max allow open connection.
+       - Used only by AbstractJamesService, the only meaningful method is
+
+        void connect( String name,
+                      ServerSocket socket,
+                      ConnectionHandlerFactory handlerFactory,
+                      ThreadPool threadPool,
+                      int maxOpenConnections )
+
+
+
+
+  -->
+    <block name="connections"
+           class="org.apache.james.util.connection.SimpleConnectionManager">
+        <provide name="thread-manager"
+                 role="org.apache.avalon.cornerstone.services.threads.ThreadManager"/>
+    </block>
+
+    <!-- The Socket Manager block
+
+          - Provide access to socket factories, both server and client.
+          - Used by AbstractJamesService, for example AJS request a server socket
+            factory to create a server socket that bind to some port depends on
+            configuration.
+
+            Be noted that AbstractJamesService is the parent class of SMTP, POP3
+
+    -->
+    <block name="sockets"
+           class="org.apache.avalon.cornerstone.blocks.sockets.DefaultSocketManager"/>
+
+    <!-- The DataSourceSelector block
+
+          Better not to use this block. Why ? the idea is this, we have different databases
+          each with different configuration. And this block will manage all of thoses
+          "database entrances". Let's say you want mysql, use this object and select
+          mysql, you will receive an object, then call getConnection to deal with SQL
+          business.
+
+          This block is not used in
+
+
+    -->
+
+    <!-- The ThreadManager block
+
+         ThreadManager is used for Connections, each connection comes with one thread.
+
+         DefaultThreadManager does not depend on any service. But when created you need
+         to set the min, max threads, name and daemon mode
+
+    -->
+    <block name="thread-manager"
+           class="org.apache.avalon.cornerstone.blocks.threads.DefaultThreadManager"/>
+
+</assembly>
