@@ -111,11 +111,14 @@ public class MailTask implements Runnable{
             }
         }  finally {
             try {
+                if(connection != null)
+                    connection.close();
                 if (preparedStatement != null)
                     preparedStatement.close();
                 if (statement != null)
                     statement.close();
             } catch (Exception ee) {
+                LOGGER.warn("Cannot close SQL prepare statement or SQL statement or SQL connection");
             }
 
 
