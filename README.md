@@ -4,24 +4,20 @@ mailcore
 # About
 
 
-MailCore is the underlying mailing service of a mass mailing system. By using MailCore, you can send emails using your organization's domain name. 
+MailCore is a mailing service with its own SMTP server. MailCore supports sending emails from your own domain name. 
 
-
-MailCore uses a modified version of Apache James as the SMTP server. Any email to your organization domain will be forwarded to a custom email address (see Requirements & Installation) 
-
-
-MailCore only loads key components of Apache James and neglects unnecessary features (POP3, IMAP, ...).
+MailCore uses a modified version of Apache James as the underlying SMTP server. Any email to your email will be forwarded to a custom email address (see Requirements & Installation) 
 
 
 # Requirements & Installation
 
 
-1. Modify config.xml to reflect your organization's domain name
+1. Modify config.xml to reflect your your domain name
 2. Email Forwarder: MailCore supports email forwarder. Modify config.xml as following
        ```xml
        <mailet match="HostIsLocal" class="Forwarder">
               <from>elink.mta@server-name.com</from>
-              <forward>larry.mta@gmail.com</forward>
+              <forward>example.mta@gmail.com</forward>
        </mailet>
        ```  
       
